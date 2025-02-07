@@ -21,17 +21,20 @@
 
 from xcube.util.jsonschema import JsonArraySchema
 from xcube.util.jsonschema import JsonComplexSchema
-from xcube.util.jsonschema import JsonIntegerSchema
 from xcube.util.jsonschema import JsonObjectSchema
-from xcube.util.jsonschema import JsonStringSchema
 from xcube.webapi.common.schemas import BOOLEAN_SCHEMA
-from xcube.webapi.common.schemas import CHUNK_SIZE_SCHEMA
 from xcube.webapi.common.schemas import FILE_SYSTEM_SCHEMA
 from xcube.webapi.common.schemas import GEO_BOUNDING_BOX_SCHEMA
 from xcube.webapi.common.schemas import IDENTIFIER_SCHEMA
 from xcube.webapi.common.schemas import PATH_SCHEMA
 from xcube.webapi.common.schemas import STRING_SCHEMA
 from xcube.webapi.common.schemas import URI_SCHEMA
+
+LABEL_COORD_SCHEMA = JsonArraySchema(
+    items=IDENTIFIER_SCHEMA,
+    min_items=1,
+    description="Name of a coordinates array that holds geometry labels. Used to for naming in case 'Split' is true."
+)
 
 VARIABLES_SCHEMA = JsonArraySchema(
     items=IDENTIFIER_SCHEMA,
@@ -64,6 +67,8 @@ COMMON_VECTORDATACUBE_PROPERTIES = dict(
     Hidden=BOOLEAN_SCHEMA,
     AccessControl=ACCESS_CONTROL_SCHEMA,
     Attribution=ATTRIBUTION_SCHEMA,
+    Split=BOOLEAN_SCHEMA,
+    LabelCoord=STRING_SCHEMA
 )
 
 VECTORDATACUBE_SCHEMA = JsonObjectSchema(properties=dict(
