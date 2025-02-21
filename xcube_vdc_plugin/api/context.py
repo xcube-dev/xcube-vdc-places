@@ -253,34 +253,22 @@ class VdcPlacesPluginContext(ApiContext):
                 LOG.debug('Could not find vector data cube opener')
                 continue
             if vdc_config.get("Split", False):
-                label_coord = vdc_config.get("LabelCoord", "geometry")
-                LOG.debug("Converting to geodataframe ...")
-                # TODO to avoid memory overflows, first split vectordatacube according to geometry,
-                #  then convert to geodataframes
-                gdf = vdc.xvec.to_geodataframe()
-                unique_values = gdf[label_coord].unique()
-                LOG.debug(f"Number of unique values {len(unique_values)}")
-                for i, unique_value in enumerate(unique_values):
-                    sub_gdf = gdf[gdf[label_coord] == unique_value]
-                    LOG.debug("Created sub gdf")
+                for j, coord in enumerate(vdc.xvec.geom_coords):
+                    geometry_name = coord
+                    break
+                label_coord = vdc_config.get("LabelCoord", geometry_name)
+                labels = vdc[label_coord].values
+                for i, label in enumerate(labels):
+                    sub_vdc = vdc.isel({geometry_name: i})
+                    sub_gdf = sub_vdc.xvec.to_geodataframe(geometry=geometry_name)
+                    LOG.debug("Created sub-geodataframe")
                     for k in vdc_config.keys():
                         sub_gdf.attrs[k] = vdc_config[k]
-                    extension = unique_value if "label_coord" is not "geometry" else i + 1
+                    extension = label if label_coord is not geometry_name else i + 1
                     sub_gdf.attrs["Title"] = f"{sub_gdf.attrs['Title']} - {extension}"
                     sub_gdf.attrs["Identifier"] = f"{sub_gdf.attrs['Identifier']}_{extension}"
                     gdfs.append(sub_gdf)
                     LOG.debug(f"Appended {sub_gdf.attrs['Title']}")
-                # if label_coord:
-                # for i in range(len(vdc.geometry)):
-                #     gdf = vdc.xvec.to_geodataframe()
-                #     sub_vdc = vdc.isel(geometry=0)
-                #     sub_vdc_label = str(sub_vdc[label_coord].values) if label_coord else i + 1
-                #     sub_vdc.xvec.set_geom_indexes(coord_names="geometry", crs=4326)
-                #     gdf = sub_vdc.xvec.to_geodataframe()
-                #     for k in vdc_config.keys():
-                #         gdf.attrs[k] = vdc_config[k]
-                #     gdf.attrs["Title"] = f"{gdf.attrs['Title']} - {sub_vdc_label}"
-                #     gdfs.append(gdf)
             else:
                 gdf = vdc.xvec.to_geodataframe()
                 for k in vdc_config.keys():
