@@ -1,5 +1,5 @@
 # The MIT License (MIT)
-# Copyright (c) 2024 by the xcube team and contributors
+# Copyright (c) 2025 by the xcube team and contributors
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
@@ -18,22 +18,19 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 # DEALINGS IN THE SOFTWARE.
-import datetime
 import fnmatch
 import itertools
 import json
-import os
-import re
+import xvec
 from typing import Mapping, Any, Optional, List, Dict, Hashable
 import dateutil.parser
 from geopandas import GeoDataFrame
 
 from xcube.constants import LOG
 from xcube.core.store import DataStorePool
-from xcube.core.store import VECTOR_DATA_CUBE_TYPE
+from xcube.core.store import DATASET_TYPE
 from xcube.server.api import ApiContext, ApiError
 from xcube.server.api import Context
-from xcube.server.config import is_absolute_path
 from xcube.core.store import DataStoreConfig
 from xcube.webapi.places import PlacesContext
 from xcube.webapi.places.context import PlaceGroup
@@ -126,7 +123,7 @@ class VdcPlacesPluginContext(ApiContext):
                     if _is_wildcard(dataset_id_pattern):
                         data_store = data_store_pool.get_store(store_instance_id)
                         store_dataset_ids = itertools.chain(
-                            data_store.get_data_ids(data_type=VECTOR_DATA_CUBE_TYPE)
+                            data_store.get_data_ids(data_type=DATASET_TYPE)
                         )
                         for store_dataset_id in store_dataset_ids:
                             if fnmatch.fnmatch(store_dataset_id, dataset_id_pattern):
@@ -238,20 +235,14 @@ class VdcPlacesPluginContext(ApiContext):
             data_store = data_store_pool.get_store(store_instance_id)
             data_id = vdc_config.get("Path")
             open_params = dict(vdc_config.get("StoreOpenParams") or {})
-            # open_params_schema = data_store.get_open_data_params_schema(data_id=data_id)
-            data_opener_ids = data_store.get_data_opener_ids(data_id)
-            vdc = None
-            for data_opener_id in data_opener_ids:
-                if data_opener_id.startswith("vectordatacube"):
-                    vdc = data_store.open_data(
-                        data_id,
-                        opener_id=data_opener_id,
-                        **open_params
-                    )
-                    break
-            if vdc is None:
-                LOG.debug('Could not find vector data cube opener')
-                continue
+            vdc = data_store.open_data(
+                data_id,
+                **open_params
+            )
+            try:
+                vdc = vdc.xvec.decode_cf()
+            except:
+                LOG.warning(f"Could not decode dataset '{data_id}'")
             if vdc_config.get("Split", False):
                 for j, coord in enumerate(vdc.xvec.geom_coords):
                     geometry_name = coord
